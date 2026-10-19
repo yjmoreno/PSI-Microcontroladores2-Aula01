@@ -3,7 +3,7 @@
 #include <zephyr/drivers/gpio.h>
 
 #define PERIODO_LED0_MS 1000 /* LED verde */
-#define PERIODO_LED1_MS 350  /* LED azul (500 na parte basica) */
+#define PERIODO_LED1_MS 350  /* LED azul */
 
 #define STACK_SIZE 1024
 #define PRIORIDADE 7
@@ -35,7 +35,8 @@ static void piscar(const struct gpio_dt_spec *led, int periodo_ms)
     while (1)
     {
         gpio_pin_toggle_dt(led);
-        k_msleep(periodo_ms);
+        printk("[%lld ms] LED pino %d trocou\n", k_uptime_get(), led->pin);
+        k_msleep(periodo_ms); /* bloqueia so esta thread; a outra continua */
     }
 }
 
