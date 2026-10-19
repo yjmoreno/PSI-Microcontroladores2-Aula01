@@ -1,1 +1,0 @@
-"mcuboot":"/Users/yjrodrigues/.platformio/packages/framework-zephyr/_pio/bootloader/mcuboot":"/Users/yjrodrigues/.platformio/packages/framework-zephyr/_pio/bootloader/mcuboot/boot/zephyr/sysbuild"
