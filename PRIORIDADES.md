@@ -57,7 +57,7 @@ Agora é B que tem prioridade maior. A acorda aos 1,55 s, mas fica pronta, esper
 
 ![Diagrama temporal do caso 3](docs/diagrama_caso3.svg)
 
-Com a mesma prioridade, uma thread não interrompe a outra. Quem está executando continua até dormir, e a outra espera na fila de prontas. No começo, A deve rodar primeiro porque foi criada antes (`a_tid` entra na fila antes de `b_tid`). O *time slicing* vem desligado por padrão; se fosse ligado, as duas iriam se alternar em fatias de tempo.
+Eu esperava que, com a mesma prioridade, uma thread não interrompesse a outra. Só que, olhando a configuração gerada pelo build (`.pio/build/frdm_kl25z/zephyr/.config`), vi que nesta placa o Zephyr vem com *time slicing* ligado: `CONFIG_TIMESLICING=y` e `CONFIG_TIMESLICE_SIZE=20`. Com isso, threads de mesma prioridade se revezam em fatias de 20 ms. A previsão fica assim: quando A acorda, ela espera no máximo o fim da fatia atual de B e depois as duas se alternam a cada 20 ms até A terminar o seu trabalho. A deve levar uns 100 ms para completar os 50 ms de trabalho, porque divide a CPU com B, e o período dela fica perto do caso 1. No começo, A roda primeiro porque foi criada antes (`a_tid` entra na fila antes de `b_tid`).
 
 ### Caso 4 — B sem `k_msleep()` e com prioridade menor (A 5, B 7), previsão
 
@@ -81,7 +81,7 @@ O resultado foi praticamente igual ao do caso 2: A só executou aos 14 060 ms e 
 
 Se uma thread não tem `k_sleep()`, ela nunca entra no estado "dormindo" e fica sempre pronta para executar. O efeito depende da prioridade dela. Se ela tiver prioridade menor que as outras, como no caso 4, as outras continuam interrompendo normalmente e ela só ocupa o tempo que sobraria para a *idle*. Se tiver prioridade maior ou igual, como no caso 5, ela nunca solta a CPU, e as threads de prioridade menor ou igual nunca mais executam.
 
-Quando as threads têm a mesma prioridade, executa primeiro a que estiver primeiro na fila de prontas. Aqui seria A, que foi criada antes. Sem *time slicing*, quem está executando só sai quando dorme ou bloqueia, e aí entra a próxima da fila.
+Quando as threads têm a mesma prioridade, executa primeiro a que estiver primeiro na fila de prontas. Aqui seria A, que foi criada antes. Depois disso, depende do *time slicing*. Sem ele, quem está executando só sai quando dorme ou bloqueia, e aí entra a próxima da fila. Com ele, que é o padrão nesta placa (fatias de 20 ms), o escalonador tira a CPU da thread ao fim de cada fatia e passa para a próxima de mesma prioridade, e elas se revezam.
 
 As threads cooperativas têm prioridade negativa e só perdem a CPU quando querem: ao chamar `k_sleep()`, `k_yield()` ou ao bloquear esperando um semáforo, fila ou mutex. Nenhuma outra thread consegue interrompê-las, e o caso 6 mostrou isso na prática. Só interrupções de hardware conseguem, e mesmo assim, quando a ISR termina, a CPU volta para a mesma thread cooperativa (o teste da pergunta 4 confirmou isso). Isso é útil para trechos que não podem ser divididos, mas uma thread cooperativa longa atrasa todo o sistema.
 
