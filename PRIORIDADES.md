@@ -41,61 +41,41 @@ O código base da atividade (commit `prioridades: código base fornecido...`) fo
 - **No caso 5, nenhuma linha `A:` apareceu em 83 s** de execução, e o LED verde não acendeu nenhuma vez no vídeo: inanição.
 - **Tempos intermediários de B:** os dois primeiros blocos de 2 milhões de iterações levam ≈ 2,18 s cada, e os seguintes ≈ 3,22 s. O Cortex-M0+ não tem instrução de divisão, então o `i % 2000000` é feito por uma rotina de software, que fica mais lenta com números maiores. Isso só aparece porque o log tem os tempos intermediários.
 
-Nos diagramas abaixo, `█` = thread executando, `░` = pronta mas esperando a CPU, `·` = dormindo, `↑` = A acorda.
+Diagramas em escala de tempo: os casos marcados como **medido** foram desenhados a partir dos logs; os casos 3 e 4 são **previsão** teórica.
 
 ### Caso 1 — A prioridade 5, B prioridade 7 (código original) — medido
 
-```
-A  ··········↑█··············↑█·········
-B  ██████████░██████·········█░████████
-           A preempta B: B "congela" enquanto A executa
-```
+![Diagrama temporal do caso 1](docs/diagrama_caso1.svg)
 
 A tem prioridade maior. Sempre que acorda (a cada 1500 ms + sua duração), **interrompe B imediatamente** (preempção). A duração medida de B aumenta exatamente o tempo que A ocupou. O LED vermelho continua aceso durante a pausa, porque B não chegou a apagá-lo: quem mostra a preempção é o log, não o LED.
 
 ### Caso 2 — A prioridade 7, B prioridade 5 (invertidas) — medido
 
-```
-A  ··········↑░░░░░░█··········↑░░░█···
-B  ████████████████·········████████···
-           A acorda, mas espera B terminar e dormir
-```
+![Diagrama temporal do caso 2](docs/diagrama_caso2.svg)
 
 Agora B tem prioridade maior. Se A acorda enquanto B está no laço longo, **A fica pronta mas não executa** até B chamar `k_msleep()`. A duração de A não muda, mas o início atrasa: a latência de A passa a depender da duração de B. Na placa, o verde só acende quando o vermelho apaga.
 
 ### Caso 3 — prioridades iguais (7 e 7) — previsão
 
-```
-A  █···········↑░░░░░█·········
-B  ░██████████████··········███
-```
+![Diagrama temporal do caso 3](docs/diagrama_caso3.svg)
 
 Com prioridades iguais **não há preempção entre elas**. Quem está executando continua até dormir; a outra espera na fila de prontas. No início, A executa primeiro porque foi criada primeiro (`a_tid` entra antes de `b_tid` na fila de prontas). O *time slicing* (`CONFIG_TIMESLICE_SIZE`) vem desligado por padrão; se fosse ligado, as duas alternariam em fatias de tempo.
 
 ### Caso 4 — B sem `k_msleep()` e prioridade menor (A 5, B 7) — previsão
 
-```
-A  ··········↑█··············↑█·········
-B  ██████████░███████████████░█████████
-```
+![Diagrama temporal do caso 4](docs/diagrama_caso4.svg)
 
 B nunca dorme, mas tem prioridade menor: A continua interrompendo B a cada 1500 ms e roda normalmente. B ocupa **todo o resto da CPU**, e a thread *idle* nunca roda (o processador nunca entra em baixo consumo). O vermelho fica praticamente sempre aceso.
 
 ### Caso 5 — B sem `k_msleep()` e prioridade maior (A 7, B 5) — medido
 
-```
-A  ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  (nunca executa)
-B  ████████████████████████████████████
-```
+![Diagrama temporal do caso 5](docs/diagrama_caso5.svg)
 
 B nunca libera a CPU e tem prioridade maior: **A nunca executa**. O LED verde nunca acende e não aparecem linhas `A:` no log. Isso é **inanição (*starvation*)** — ver pergunta 3.
 
 ### Caso 6 — B cooperativa (prioridade -1), A prioridade 5 — medido
 
-```
-A  ··········↑░░░░░░█··········↑░░░█···
-B  ████████████████·········████████···
-```
+![Diagrama temporal do caso 6](docs/diagrama_caso6.svg)
 
 Uma thread cooperativa **não pode ser interrompida por nenhuma thread**, nem pelas preemptivas de prioridade maior em número. A só executa quando B cede a CPU voluntariamente (`k_msleep`). O diagrama fica parecido com o caso 2, mas por outro motivo: no caso 2 B tinha prioridade maior; aqui é a natureza cooperativa. Interrupções de hardware continuam interrompendo B (pergunta 4).
 
