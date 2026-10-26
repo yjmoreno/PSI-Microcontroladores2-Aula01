@@ -12,13 +12,18 @@ No código, cada cancela é uma thread e processa 1000 carros. A de entrada soma
 
 Este foi o prompt que usei na IA:
 
-> Estou usando a placa NXP FRDM-KL25Z com Zephyr 4.2 e PlatformIO. Quero um código em C simples, de nível de aluno de graduação, que mostre na prática uma condição de corrida (race condition) causada pelo uso de um recurso compartilhado sem sincronização.
+> Estou usando a placa FRDM-KL25Z com Zephyr 4.2 no PlatformIO. Preciso de um código simples em C que mostre uma race condition (condição de corrida) quando duas threads usam a mesma variável sem proteção.
 >
-> Use como exemplo real um estacionamento com duas cancelas. Uma thread representa a cancela de entrada e soma 1 a uma variável global com o número de carros dentro do estacionamento, e a outra thread representa a cancela de saída e subtrai 1 dessa mesma variável. Cada cancela deve processar 1000 carros, então o número de carros dentro deve terminar em zero. As duas threads devem ter a mesma prioridade e o time slicing deve estar ligado com fatia de 1 ms, para que o escalonador troque de thread no meio da atualização. Na atualização do contador, faça a leitura da variável, espere um pouco com k_busy_wait() simulando o tempo de processar o sensor da cancela e só depois grave o novo valor, para deixar a janela da corrida visível.
+> Quero usar como exemplo um estacionamento com duas cancelas:
+> - uma thread é a cancela de entrada e soma 1 no número de carros dentro
+> - outra thread é a cancela de saída e tira 1
+> - cada cancela passa 1000 carros, então no final tem que dar 0
 >
-> No final, o main deve esperar as duas threads terminarem e mostrar com Logging quantos carros ficaram dentro, comparando com o valor esperado. Acenda o LED verde da placa se o resultado estiver certo e o vermelho se estiver errado. Inclua uma macro PROTEGER que, quando vale 1, protege a atualização do contador com um mutex, para eu comparar os dois casos.
+> Coloca as duas threads com a mesma prioridade e liga o time slicing com 1 ms, pra trocar de thread no meio da conta. Na hora de atualizar o contador, lê o valor, espera um pouco com k_busy_wait() (como se fosse o tempo do sensor) e só depois grava, pra o erro aparecer.
 >
-> Passe também o prj.conf necessário e explique brevemente por que o erro acontece.
+> No final o main mostra no log quantos carros ficaram dentro. Se der 0 acende o LED verde, se der errado acende o vermelho. Coloca também um #define PROTEGER que, se for 1, usa um mutex, pra eu comparar os dois casos.
+>
+> Me manda o prj.conf também e explica rapidinho por que o erro acontece.
 
 ## O código gerado
 
