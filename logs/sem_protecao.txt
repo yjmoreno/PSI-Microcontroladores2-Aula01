@@ -1,0 +1,18 @@
+*** Booting Zephyr OS build zephyr-v40200 ***
+[00:00:00.004,000] <inf> estacionamento: Protecao com mutex: NAO
+[00:00:00.010,000] <inf> estacionamento: Entram 1000 carros e saem 1000. Esperado no final: 0 carros dentro
+[00:00:00.215,000] <inf> estacionamento: Tempo total: 195 ms
+[00:00:00.221,000] <inf> estacionamento: Carros dentro no final: -983
+[00:00:00.228,000] <wrn> estacionamento: Contagem errada em -983 carros: condicao de corrida!
+*** Booting Zephyr OS build zephyr-v40200 ***
+[00:00:00.004,000] <inf> estacionamento: Protecao com mutex: NAO
+[00:00:00.010,000] <inf> estacionamento: Entram 1000 carros e saem 1000. Esperado no final: 0 carros dentro
+[00:00:00.215,000] <inf> estacionamento: Tempo total: 195 ms
+[00:00:00.221,000] <inf> estacionamento: Carros dentro no final: -983
+[00:00:00.228,000] <wrn> estacionamento: Contagem errada em -983 carros: condicao de corrida!
+*** Booting Zephyr OS build zephyr-v40200 ***
+[00:00:00.004,000] <inf> estacionamento: Protecao com mutex: NAO
+[00:00:00.010,000] <inf> estacionamento: Entram 1000 carros e saem 1000. Esperado no final: 0 carros dentro
+[00:00:00.215,000] <inf> estacionamento: Tempo total: 195 ms
+[00:00:00.221,000] <inf> estacionamento: Carros dentro no final: -983
+[00:00:00.228,000] <wrn> estacionamento: Contagem errada em -983 carros: condicao de corrida!

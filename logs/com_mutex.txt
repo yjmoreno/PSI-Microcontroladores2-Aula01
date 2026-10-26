@@ -1,0 +1,18 @@
+*** Booting Zephyr OS build zephyr-v40200 ***
+[00:00:00.004,000] <inf> estacionamento: Protecao com mutex: SIM
+[00:00:00.010,000] <inf> estacionamento: Entram 1000 carros e saem 1000. Esperado no final: 0 carros dentro
+[00:00:00.305,000] <inf> estacionamento: Tempo total: 285 ms
+[00:00:00.311,000] <inf> estacionamento: Carros dentro no final: 0
+[00:00:00.318,000] <inf> estacionamento: Contagem correta
+*** Booting Zephyr OS build zephyr-v40200 ***
+[00:00:00.004,000] <inf> estacionamento: Protecao com mutex: SIM
+[00:00:00.010,000] <inf> estacionamento: Entram 1000 carros e saem 1000. Esperado no final: 0 carros dentro
+[00:00:00.305,000] <inf> estacionamento: Tempo total: 285 ms
+[00:00:00.311,000] <inf> estacionamento: Carros dentro no final: 0
+[00:00:00.318,000] <inf> estacionamento: Contagem correta
+*** Booting Zephyr OS build zephyr-v40200 ***
+[00:00:00.004,000] <inf> estacionamento: Protecao com mutex: SIM
+[00:00:00.010,000] <inf> estacionamento: Entram 1000 carros e saem 1000. Esperado no final: 0 carros dentro
+[00:00:00.305,000] <inf> estacionamento: Tempo total: 285 ms
+[00:00:00.311,000] <inf> estacionamento: Carros dentro no final: 0
+[00:00:00.318,000] <inf> estacionamento: Contagem correta
