@@ -1,0 +1,36 @@
+[00:00:02.190,000] <inf> prioridades: B: 2000000 iteracoes, 2136 ms desde o inicio
+[00:00:04.327,000] <inf> prioridades: B: 4000000 iteracoes, 4273 ms desde o inicio
+[00:00:07.549,000] <inf> prioridades: B: 6000000 iteracoes, 7495 ms desde o inicio
+[00:00:10.771,000] <inf> prioridades: B: 8000000 iteracoes, 10717 ms desde o inicio
+[00:00:13.993,000] <inf> prioridades: B: inicio 54 ms, fim 13993 ms, duracao 13939686 us
+[00:00:14.002,000] <inf> prioridades: B: 0 iteracoes, 0 ms desde o inicio
+[00:00:16.138,000] <inf> prioridades: B: 2000000 iteracoes, 2136 ms desde o inicio
+[00:00:18.275,000] <inf> prioridades: B: 4000000 iteracoes, 4273 ms desde o inicio
+[00:00:21.497,000] <inf> prioridades: B: 6000000 iteracoes, 7495 ms desde o inicio
+[00:00:24.719,000] <inf> prioridades: B: 8000000 iteracoes, 10717 ms desde o inicio
+[00:00:27.942,000] <inf> prioridades: B: inicio 14002 ms, fim 27942 ms, duracao 13939919 us
+[00:00:27.951,000] <inf> prioridades: B: 0 iteracoes, 1 ms desde o inicio
+[00:00:30.087,000] <inf> prioridades: B: 2000000 iteracoes, 2137 ms desde o inicio
+[00:00:32.224,000] <inf> prioridades: B: 4000000 iteracoes, 4274 ms desde o inicio
+[00:00:35.446,000] <inf> prioridades: B: 6000000 iteracoes, 7496 ms desde o inicio
+[00:00:38.668,000] <inf> prioridades: B: 8000000 iteracoes, 10718 ms desde o inicio
+[00:00:41.890,000] <inf> prioridades: B: inicio 27950 ms, fim 41890 ms, duracao 13939767 us
+[00:00:41.899,000] <inf> prioridades: B: 0 iteracoes, 0 ms desde o inicio
+[00:00:44.035,000] <inf> prioridades: B: 2000000 iteracoes, 2136 ms desde o inicio
+[00:00:46.172,000] <inf> prioridades: B: 4000000 iteracoes, 4273 ms desde o inicio
+[00:00:49.394,000] <inf> prioridades: B: 6000000 iteracoes, 7495 ms desde o inicio
+[00:00:52.617,000] <inf> prioridades: B: 8000000 iteracoes, 10718 ms desde o inicio
+[00:00:55.839,000] <inf> prioridades: B: inicio 41899 ms, fim 55839 ms, duracao 13939884 us
+[00:00:55.848,000] <inf> prioridades: B: 0 iteracoes, 0 ms desde o inicio
+[00:00:57.984,000] <inf> prioridades: B: 2000000 iteracoes, 2136 ms desde o inicio
+[00:01:00.121,000] <inf> prioridades: B: 4000000 iteracoes, 4273 ms desde o inicio
+[00:01:03.343,000] <inf> prioridades: B: 6000000 iteracoes, 7495 ms desde o inicio
+[00:01:06.565,000] <inf> prioridades: B: 8000000 iteracoes, 10717 ms desde o inicio
+[00:01:09.788,000] <inf> prioridades: B: inicio 55848 ms, fim 69788 ms, duracao 13939893 us
+[00:01:09.796,000] <inf> prioridades: B: 0 iteracoes, 0 ms desde o inicio
+[00:01:11.932,000] <inf> prioridades: B: 2000000 iteracoes, 2136 ms desde o inicio
+[00:01:14.069,000] <inf> prioridades: B: 4000000 iteracoes, 4273 ms desde o inicio
+[00:01:17.292,000] <inf> prioridades: B: 6000000 iteracoes, 7495 ms desde o inicio
+[00:01:20.514,000] <inf> prioridades: B: 8000000 iteracoes, 10718 ms desde o inicio
+[00:01:23.736,000] <inf> prioridades: B: inicio 69796 ms, fim 83736 ms, duracao 13939806 us
+[00:01:23.745,000] <inf> prioridades: B: 0 iteracoes, 0 ms desde o inicio

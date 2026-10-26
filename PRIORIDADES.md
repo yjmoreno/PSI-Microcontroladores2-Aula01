@@ -23,20 +23,27 @@ O código base da atividade (commit `prioridades: código base fornecido...`) fo
 
 **Como foi medido.** Cada thread lê `k_cycle_get_32()` ao acender o LED e de novo ao apagar. A diferença, convertida com `k_cyc_to_us_floor32()`, é a **duração de parede** do trabalho: inclui o tempo em que a thread ficou parada esperando outra de prioridade maior. Por isso, comparar a duração de um caso para o outro mostra a preempção. O `k_uptime_get_32()` dá os instantes de início e fim em ms, usados para desenhar os diagramas.
 
-**Tempos medidos (preencher com o log de cada caso):**
+**Tempos medidos na placa** (logs completos em [`logs/`](logs/)):
 
-| Caso | Duração de A sem interrupção | Duração de B | B foi interrompida por A? | A esperou por B? |
+| Caso | Duração de A | Duração de B | A interrompeu B? | Período real de A |
 |---|---|---|---|---|
-| 1 | | | | |
-| 2 | | | | |
-| 3 | | | | |
-| 4 | | | | |
-| 5 | | | | |
-| 6 | | | | |
+| 1 — A 5, B 7 | 50,08 ms | 14,55 s | **Sim**, 9 vezes por ciclo de B | **1559 ms** (pontual) |
+| 2 — A 7, B 5 | 50,08 ms | 14,02 s | **Não** | **≈ 15,03 s** — A só roda quando B dorme |
+| 5 — A 7, B 5, B sem sono | — (nunca executou) | 13,94 s | **Não** | **A nunca executa** (inanição) |
+| 6 — A 5, B coop. (-1) | 50,08 ms | 14,00 s | **Não** | **≈ 15,0 s** — A só roda quando B cede a CPU |
+| 3 e 4 | não executados na placa | | | ver previsão nos diagramas |
+
+**O que os números mostram:**
+
+- **A sempre leva 50,08 ms** quando executa (variação < 20 µs). O trabalho de A é o mesmo; o que muda entre os casos é **quando** ela consegue executar.
+- **No caso 1, B leva 530 ms a mais** (14,55 s contra 14,02 s no caso 2). São as 9 interrupções de A por ciclo: 9 × (50 ms de trabalho + ~9 ms do log) ≈ 530 ms. O período de A é 1500 ms de sono + 50 ms de trabalho + ~9 ms de log = **1559 ms**, sem atraso nenhum, mesmo com B ocupando a CPU.
+- **Nos casos 2 e 6, A espera B inteira.** Na primeira volta, A só executou aos 14 085 ms (caso 2) e 14 060 ms (caso 6), embora estivesse pronta desde os 1550 ms. Depois disso, A executa uma única vez por ciclo, cerca de 8 ms depois que B vai dormir.
+- **No caso 5, nenhuma linha `A:` apareceu em 83 s** de execução, e o LED verde não acendeu nenhuma vez no vídeo: inanição.
+- **Tempos intermediários de B:** os dois primeiros blocos de 2 milhões de iterações levam ≈ 2,18 s cada, e os seguintes ≈ 3,22 s. O Cortex-M0+ não tem instrução de divisão, então o `i % 2000000` é feito por uma rotina de software, que fica mais lenta com números maiores. Isso só aparece porque o log tem os tempos intermediários.
 
 Nos diagramas abaixo, `█` = thread executando, `░` = pronta mas esperando a CPU, `·` = dormindo, `↑` = A acorda.
 
-### Caso 1 — A prioridade 5, B prioridade 7 (código original)
+### Caso 1 — A prioridade 5, B prioridade 7 (código original) — medido
 
 ```
 A  ··········↑█··············↑█·········
@@ -46,7 +53,7 @@ B  ██████████░██████·········█░�
 
 A tem prioridade maior. Sempre que acorda (a cada 1500 ms + sua duração), **interrompe B imediatamente** (preempção). A duração medida de B aumenta exatamente o tempo que A ocupou. O LED vermelho continua aceso durante a pausa, porque B não chegou a apagá-lo: quem mostra a preempção é o log, não o LED.
 
-### Caso 2 — A prioridade 7, B prioridade 5 (invertidas)
+### Caso 2 — A prioridade 7, B prioridade 5 (invertidas) — medido
 
 ```
 A  ··········↑░░░░░░█··········↑░░░█···
@@ -56,7 +63,7 @@ B  ████████████████·········███�
 
 Agora B tem prioridade maior. Se A acorda enquanto B está no laço longo, **A fica pronta mas não executa** até B chamar `k_msleep()`. A duração de A não muda, mas o início atrasa: a latência de A passa a depender da duração de B. Na placa, o verde só acende quando o vermelho apaga.
 
-### Caso 3 — prioridades iguais (7 e 7)
+### Caso 3 — prioridades iguais (7 e 7) — previsão
 
 ```
 A  █···········↑░░░░░█·········
@@ -65,7 +72,7 @@ B  ░██████████████··········███
 
 Com prioridades iguais **não há preempção entre elas**. Quem está executando continua até dormir; a outra espera na fila de prontas. No início, A executa primeiro porque foi criada primeiro (`a_tid` entra antes de `b_tid` na fila de prontas). O *time slicing* (`CONFIG_TIMESLICE_SIZE`) vem desligado por padrão; se fosse ligado, as duas alternariam em fatias de tempo.
 
-### Caso 4 — B sem `k_msleep()` e prioridade menor (A 5, B 7)
+### Caso 4 — B sem `k_msleep()` e prioridade menor (A 5, B 7) — previsão
 
 ```
 A  ··········↑█··············↑█·········
@@ -74,7 +81,7 @@ B  ██████████░██████████████�
 
 B nunca dorme, mas tem prioridade menor: A continua interrompendo B a cada 1500 ms e roda normalmente. B ocupa **todo o resto da CPU**, e a thread *idle* nunca roda (o processador nunca entra em baixo consumo). O vermelho fica praticamente sempre aceso.
 
-### Caso 5 — B sem `k_msleep()` e prioridade maior (A 7, B 5)
+### Caso 5 — B sem `k_msleep()` e prioridade maior (A 7, B 5) — medido
 
 ```
 A  ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  (nunca executa)
@@ -83,7 +90,7 @@ B  █████████████████████████�
 
 B nunca libera a CPU e tem prioridade maior: **A nunca executa**. O LED verde nunca acende e não aparecem linhas `A:` no log. Isso é **inanição (*starvation*)** — ver pergunta 3.
 
-### Caso 6 — B cooperativa (prioridade -1), A prioridade 5
+### Caso 6 — B cooperativa (prioridade -1), A prioridade 5 — medido
 
 ```
 A  ··········↑░░░░░░█··········↑░░░█···
@@ -127,7 +134,7 @@ O botão SW0 (PTA16) foi configurado com pull-up e interrupção na borda de des
 4. a ISR `button_isr()` inverte o LED azul e registra qual thread foi interrompida (`k_current_get()`);
 5. ao sair da ISR, o escalonador retoma a thread pronta de maior prioridade.
 
-**Comportamento observado:** o LED azul muda **imediatamente** em todos os casos — inclusive no caso 5, em que A nunca roda, e no caso 6, em que B é cooperativa. O log mostra `interrompeu a thread b_tid` quando o botão é pressionado durante o laço de B, e `idle` quando nenhuma thread estava executando.
+**Comportamento esperado:** o LED azul muda **imediatamente** em qualquer caso — inclusive no caso 5, em que A nunca roda, e no caso 6, em que B é cooperativa. O log mostra `interrompeu a thread b_tid` quando o botão é acionado durante o laço de B, e `idle` quando nenhuma thread estava executando. Como a placa não tem botão de usuário, o pino PTA16 é ligado ao GND com um fio para simular o botão.
 
 **Conclusão:** a ISR tem prioridade sobre todas as threads, preemptivas ou cooperativas. Por isso deve ser **curta**: fazer só o mínimo (inverter um LED, sinalizar um semáforo) e deixar o processamento para uma thread. O `LOG_INF` dentro da ISR está aí só para a demonstração.
 
