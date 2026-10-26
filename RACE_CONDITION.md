@@ -12,19 +12,7 @@ No código, cada cancela é uma thread e processa 1000 carros. A de entrada soma
 
 Este foi o prompt que usei na IA:
 
-> Estou usando a placa FRDM-KL25Z com Zephyr 4.2 no PlatformIO. Preciso de um código simples em C que mostre uma race condition (condição de corrida) quando duas threads usam a mesma variável sem proteção.
->
-> Quero usar como exemplo um estacionamento com duas cancelas:
->
-> - uma thread é a cancela de entrada e soma 1 no número de carros dentro
-> - outra thread é a cancela de saída e tira 1
-> - cada cancela passa 1000 carros, então no final tem que dar 0
->
-> Coloca as duas threads com a mesma prioridade e liga o time slicing com 1 ms, pra trocar de thread no meio da conta. Na hora de atualizar o contador, lê o valor, espera um pouco com k_busy_wait() (como se fosse o tempo do sensor) e só depois grava, pra o erro aparecer.
->
-> No final o main mostra no log quantos carros ficaram dentro. Se der 0 acende o LED verde, se der errado acende o vermelho. Coloca também um #define PROTEGER que, se for 1, usa um mutex, pra eu comparar os dois casos.
->
-> Me manda o prj.conf também e explica rapidinho por que o erro acontece.
+> Estou usando a placa FRDM-KL25Z com Zephyr 4.2 no PlatformIO. Preciso de um código simples em C que mostre uma race condition (condição de corrida) aplicando o conceito de threads sem proteção e com proteção. Use um exemplo real, tipo um estacionamento com uma cancela de entrada e uma de saída mexendo no mesmo contador de carros. Precisa haver demonstração física na minha placa do que acontece no algoritmo, saídas como zero e uns não são tão úteis. Saídas como cor de LED diferente para cada condição ou mudança no tempo que pisca seriam bons indicadores.
 
 ## O código gerado
 
@@ -45,7 +33,9 @@ static void atualiza_contador(int delta)
 }
 ```
 
-As duas threads têm a mesma prioridade (7), e no `prj.conf` o *time slicing* está com fatia de 1 ms (`CONFIG_TIMESLICE_SIZE=1`). Assim o escalonador alterna entre as cancelas a cada 1 ms, sem que nenhuma delas peça. O `main` espera as duas terminarem usando um semáforo, mostra o resultado no log e acende o LED.
+Para o erro aparecer de forma garantida, a IA fez algumas escolhas que eu não tinha pedido diretamente. As duas threads têm a mesma prioridade (7) e o *time slicing* está ligado com fatia de 1 ms (`CONFIG_TIMESLICE_SIZE=1` no `prj.conf`), então o escalonador alterna entre as cancelas a cada 1 ms, sem que nenhuma delas peça. Com prioridades diferentes, uma cancela faria quase tudo antes da outra e a corrida quase não apareceria, como vi no caso 2 da atividade de prioridades. Além disso, a atualização espera 50 µs com `k_busy_wait()` entre ler e gravar. Um `carros_dentro++` normal leva poucos ciclos e a troca de thread quase nunca cairia bem no meio dele; a espera alarga essa janela, o que é justamente o problema de seção crítica descrito no livro.
+
+Para a demonstração física, o LED verde acende quando a contagem termina certa e o vermelho quando termina errada. O `main` espera as duas cancelas terminarem usando um semáforo, mostra o resultado no log e acende o LED.
 
 ## Resultados na placa
 
