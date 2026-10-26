@@ -1,150 +1,82 @@
 #include <zephyr/kernel.h>
 #include <zephyr/drivers/gpio.h>
-#include <zephyr/device.h>
 #include <zephyr/logging/log.h>
 
-LOG_MODULE_REGISTER(prioridades, LOG_LEVEL_INF);
+LOG_MODULE_REGISTER(estacionamento, LOG_LEVEL_INF);
 
-/* ====================================================
- * ESCOLHA DO CASO: mude o numero, grave e salve o log
- *   1: A prio 5,  B prio 7,  os dois dormem  (codigo original)
- *   2: A prio 7,  B prio 5,  os dois dormem  (prioridades invertidas)
- *   3: A prio 7,  B prio 7,  os dois dormem  (prioridades iguais)
- *   4: A prio 5,  B prio 7,  B SEM k_msleep  (B nunca dorme, prioridade menor)
- *   5: A prio 7,  B prio 5,  B SEM k_msleep  (B nunca dorme, prioridade maior)
- *   6: A prio 5,  B prio -1 (cooperativa)    (A nao consegue interromper B)
- * ==================================================== */
-#define CASO 1
+#define CARROS_POR_CANCELA 1000  /* carros que passam em cada cancela */
+#define PROTEGER           0     /* 0 = sem protecao (mostra o erro), 1 = com mutex */
 
-#if CASO == 1
-#define PRIO_THREAD_A 5
-#define PRIO_THREAD_B 7
-#define B_DORME       1
-#elif CASO == 2
-#define PRIO_THREAD_A 7
-#define PRIO_THREAD_B 5
-#define B_DORME       1
-#elif CASO == 3
-#define PRIO_THREAD_A 7
-#define PRIO_THREAD_B 7
-#define B_DORME       1
-#elif CASO == 4
-#define PRIO_THREAD_A 5
-#define PRIO_THREAD_B 7
-#define B_DORME       0
-#elif CASO == 5
-#define PRIO_THREAD_A 7
-#define PRIO_THREAD_B 5
-#define B_DORME       0
-#elif CASO == 6
-#define PRIO_THREAD_A 5
-#define PRIO_THREAD_B -1
-#define B_DORME       1
+#define STACK_SIZE 1024
+#define PRIORIDADE 7             /* mesma prioridade nas duas cancelas */
+
+static const struct gpio_dt_spec led_verde    = GPIO_DT_SPEC_GET(DT_ALIAS(led0), gpios);
+static const struct gpio_dt_spec led_vermelho = GPIO_DT_SPEC_GET(DT_ALIAS(led2), gpios);
+
+/* Recurso compartilhado: quantos carros estao dentro do estacionamento */
+static int carros_dentro = 0;
+
+K_MUTEX_DEFINE(trava);
+K_SEM_DEFINE(terminou, 0, 2);
+
+/* Atualiza o contador do jeito "ingenuo": le, processa e grava */
+static void atualiza_contador(int delta)
+{
+#if PROTEGER
+    k_mutex_lock(&trava, K_FOREVER);
 #endif
+    int copia = carros_dentro;      /* 1. le o valor atual */
+    k_busy_wait(50);                /* 2. tempo de processar o sensor (50 us) */
+    carros_dentro = copia + delta;  /* 3. grava o novo valor */
+#if PROTEGER
+    k_mutex_unlock(&trava);
+#endif
+}
 
-#define TEMPO_A_MS  1500  // Thread A dorme
-#define TEMPO_B_MS  1000  // Thread B dorme
-#define STACK_SIZE  1024  // 512 nao basta com Logging (formatacao usa a pilha)
-#define ATRASO_MS   50    // threads comecam depois do main configurar os GPIOs
-
-// --- LEDs e botao via DeviceTree ---
-#define LED_A_NODE  DT_ALIAS(led0)                 // LED verde
-#define LED_B_NODE  DT_ALIAS(led2)                 // LED vermelho
-#define LED_C_NODE  DT_ALIAS(led1)                 // LED azul (ISR)
-#define BUTTON_NODE DT_NODELABEL(user_button_0)    // SW0 (PTA16)
-
-static const struct gpio_dt_spec ledA   = GPIO_DT_SPEC_GET(LED_A_NODE, gpios);
-static const struct gpio_dt_spec ledB   = GPIO_DT_SPEC_GET(LED_B_NODE, gpios);
-static const struct gpio_dt_spec ledC   = GPIO_DT_SPEC_GET(LED_C_NODE, gpios);
-static const struct gpio_dt_spec button = GPIO_DT_SPEC_GET(BUTTON_NODE, gpios);
-static struct gpio_callback button_cb_data;
-
-// ----------------------------------------------------
-// THREAD A — tarefa curta
-// ----------------------------------------------------
-void thread_A(void *p1, void *p2, void *p3)
+static void cancela_entrada(void *p1, void *p2, void *p3)
 {
-    while (1) {
-        uint32_t inicio_ms = k_uptime_get_32();
-        uint32_t inicio_cyc = k_cycle_get_32();   // contador do SysTick (48 MHz)
-
-        gpio_pin_set_dt(&ledA, 1);
-        for (volatile int i = 0; i < 200000; i++) {}
-        gpio_pin_set_dt(&ledA, 0);
-
-        uint32_t dur_us = k_cyc_to_us_floor32(k_cycle_get_32() - inicio_cyc);
-        LOG_INF("A: inicio %u ms, fim %u ms, duracao %u us",
-                inicio_ms, k_uptime_get_32(), dur_us);
-
-        k_msleep(TEMPO_A_MS);
+    for (int i = 0; i < CARROS_POR_CANCELA; i++) {
+        atualiza_contador(+1);
     }
+    k_sem_give(&terminou);
 }
 
-// ----------------------------------------------------
-// THREAD B — tarefa longa
-// ----------------------------------------------------
-void thread_B(void *p1, void *p2, void *p3)
+static void cancela_saida(void *p1, void *p2, void *p3)
 {
-    while (1) {
-        uint32_t inicio_ms = k_uptime_get_32();
-        uint32_t inicio_cyc = k_cycle_get_32();
-
-        gpio_pin_set_dt(&ledB, 1);
-        for (volatile int i = 0; i < 10000000; i++) {
-            if (i % 2000000 == 0) {
-                // tempo intermediario: mostra se B foi interrompida no meio
-                LOG_INF("B: %d iteracoes, %u ms desde o inicio",
-                        i, k_uptime_get_32() - inicio_ms);
-            }
-        }
-        gpio_pin_set_dt(&ledB, 0);
-
-        uint32_t dur_us = k_cyc_to_us_floor32(k_cycle_get_32() - inicio_cyc);
-        LOG_INF("B: inicio %u ms, fim %u ms, duracao %u us",
-                inicio_ms, k_uptime_get_32(), dur_us);
-
-        if (B_DORME) {
-            k_msleep(TEMPO_B_MS);
-        }
+    for (int i = 0; i < CARROS_POR_CANCELA; i++) {
+        atualiza_contador(-1);
     }
+    k_sem_give(&terminou);
 }
 
-// ----------------------------------------------------
-// ISR do botao — roda acima de qualquer thread
-// ----------------------------------------------------
-void button_isr(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
-{
-    gpio_pin_toggle_dt(&ledC);
-    LOG_INF("ISR botao em %u ms (interrompeu a thread %s)",
-            k_uptime_get_32(), k_thread_name_get(k_current_get()));
-}
-
-K_THREAD_DEFINE(a_tid, STACK_SIZE, thread_A, NULL, NULL, NULL, PRIO_THREAD_A, 0, ATRASO_MS);
-K_THREAD_DEFINE(b_tid, STACK_SIZE, thread_B, NULL, NULL, NULL, PRIO_THREAD_B, 0, ATRASO_MS);
+/* As cancelas comecam 100 ms depois do boot, quando o main ja configurou tudo */
+K_THREAD_DEFINE(entrada_id, STACK_SIZE, cancela_entrada, NULL, NULL, NULL, PRIORIDADE, 0, 100);
+K_THREAD_DEFINE(saida_id,   STACK_SIZE, cancela_saida,   NULL, NULL, NULL, PRIORIDADE, 0, 100);
 
 int main(void)
 {
-    if (!gpio_is_ready_dt(&ledA) || !gpio_is_ready_dt(&ledB) ||
-        !gpio_is_ready_dt(&ledC) || !gpio_is_ready_dt(&button)) {
-        LOG_ERR("GPIO nao esta pronto");
-        return 0;
-    }
+    gpio_pin_configure_dt(&led_verde, GPIO_OUTPUT_INACTIVE);
+    gpio_pin_configure_dt(&led_vermelho, GPIO_OUTPUT_INACTIVE);
 
-    gpio_pin_configure_dt(&ledA, GPIO_OUTPUT_INACTIVE);
-    gpio_pin_configure_dt(&ledB, GPIO_OUTPUT_INACTIVE);
-    gpio_pin_configure_dt(&ledC, GPIO_OUTPUT_INACTIVE);
+    LOG_INF("Protecao com mutex: %s", PROTEGER ? "SIM" : "NAO");
+    LOG_INF("Entram %d carros e saem %d. Esperado no final: 0 carros dentro",
+            CARROS_POR_CANCELA, CARROS_POR_CANCELA);
 
-    gpio_pin_configure_dt(&button, GPIO_INPUT | GPIO_PULL_UP);
-    gpio_pin_interrupt_configure_dt(&button, GPIO_INT_EDGE_FALLING);
-    gpio_init_callback(&button_cb_data, button_isr, BIT(button.pin));
-    gpio_add_callback(button.port, &button_cb_data);
+    uint32_t inicio = k_uptime_get_32();
 
-    LOG_INF("=== Caso %d: A prio %d, B prio %d, B dorme: %s ===",
-            CASO, PRIO_THREAD_A, PRIO_THREAD_B, B_DORME ? "sim" : "nao");
-    LOG_INF("Clock do SysTick: %u Hz", sys_clock_hw_cycles_per_sec());
+    /* espera as duas cancelas terminarem */
+    k_sem_take(&terminou, K_FOREVER);
+    k_sem_take(&terminou, K_FOREVER);
 
-    while (1) {
-        k_sleep(K_FOREVER); // main dorme e libera a CPU
+    LOG_INF("Tempo total: %u ms", k_uptime_get_32() - inicio);
+    LOG_INF("Carros dentro no final: %d", carros_dentro);
+
+    if (carros_dentro == 0) {
+        gpio_pin_set_dt(&led_verde, 1);
+        LOG_INF("Contagem correta");
+    } else {
+        gpio_pin_set_dt(&led_vermelho, 1);
+        LOG_WRN("Contagem errada em %d carros: condicao de corrida!", carros_dentro);
     }
     return 0;
 }
