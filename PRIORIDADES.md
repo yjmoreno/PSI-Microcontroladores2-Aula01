@@ -134,7 +134,22 @@ O botão SW0 (PTA16) foi configurado com pull-up e interrupção na borda de des
 4. a ISR `button_isr()` inverte o LED azul e registra qual thread foi interrompida (`k_current_get()`);
 5. ao sair da ISR, o escalonador retoma a thread pronta de maior prioridade.
 
-**Comportamento esperado:** o LED azul muda **imediatamente** em qualquer caso — inclusive no caso 5, em que A nunca roda, e no caso 6, em que B é cooperativa. O log mostra `interrompeu a thread b_tid` quando o botão é acionado durante o laço de B, e `idle` quando nenhuma thread estava executando. Como a placa não tem botão de usuário, o pino PTA16 é ligado ao GND com um fio para simular o botão.
+**Teste na placa (caso 6, B cooperativa)** — log em [`logs/caso6_isr.txt`](logs/caso6_isr.txt). A placa não tem botão de usuário, então o pino PTA16 foi ligado ao GND com um fio (conector J2: PTA16 no pino 9, GND no pino 14):
+
+| Medida | Resultado |
+|---|---|
+| Interrupções registradas | 10, em 6 toques do fio |
+| Thread interrompida | **`b_tid` em todas** — a thread cooperativa, que nenhuma outra thread consegue interromper |
+| Reação do LED azul | Imediata, inclusive com o LED vermelho aceso (B no meio do laço); vermelho + azul aparece como magenta no vídeo |
+| Duração de B sem toque | 13 997,9 ms |
+| Duração de B com 1, 2 e 3 interrupções | 14 006,3 ms · 14 014,8 ms · 14 023,6 ms → **≈ 8,5 ms por interrupção** |
+| Toques que geraram 2 interrupções | 4 de 6, separadas por 9 a 18 ms → **repique (*bounce*)** do contato |
+
+**O que isso mostra:**
+
+- A ISR executa **acima de qualquer thread**, até da cooperativa: B estava no laço e mesmo assim foi interrompida, e voltou exatamente de onde parou.
+- Cada interrupção atrasou B em ≈ 8,5 ms. Quase todo esse tempo é o `LOG_INF` dentro da ISR: no modo imediato, a mensagem (~90 caracteres) é enviada pela UART a 115200 bit/s, o que leva ≈ 8 ms. Inverter o LED leva microssegundos. Isso mostra na prática **por que a ISR deve ser curta** — em um sistema real, o log ficaria fora dela.
+- O contato metálico gera várias bordas de descida em poucos milissegundos (repique). Com um botão de verdade, seria preciso um *debounce*, por exemplo ignorar novas interrupções por ~50 ms.
 
 **Conclusão:** a ISR tem prioridade sobre todas as threads, preemptivas ou cooperativas. Por isso deve ser **curta**: fazer só o mínimo (inverter um LED, sinalizar um semáforo) e deixar o processamento para uma thread. O `LOG_INF` dentro da ISR está aí só para a demonstração.
 

@@ -1,0 +1,88 @@
+[00:00:19.409,000] <inf> prioridades: B: 4000000 iteracoes, 4349 ms desde o inicio
+[00:00:22.625,000] <inf> prioridades: B: 6000000 iteracoes, 7565 ms desde o inicio
+[00:00:25.842,000] <inf> prioridades: B: 8000000 iteracoes, 10782 ms desde o inicio
+[00:00:29.058,000] <inf> prioridades: B: inicio 15060 ms, fim 29058 ms, duracao 13997875 us
+[00:00:29.117,000] <inf> prioridades: A: inicio 29067 ms, fim 29117 ms, duracao 50084 us
+[00:00:30.067,000] <inf> prioridades: B: 0 iteracoes, 0 ms desde o inicio
+[00:00:32.241,000] <inf> prioridades: B: 2000000 iteracoes, 2174 ms desde o inicio
+[00:00:32.899,000] <inf> prioridades: ISR botao em 32899 ms (interrompeu a thread b_tid)
+[00:00:32.917,000] <inf> prioridades: ISR botao em 32917 ms (interrompeu a thread b_tid)
+[00:00:34.432,000] <inf> prioridades: B: 4000000 iteracoes, 4365 ms desde o inicio
+[00:00:37.649,000] <inf> prioridades: B: 6000000 iteracoes, 7582 ms desde o inicio
+[00:00:40.865,000] <inf> prioridades: B: 8000000 iteracoes, 10798 ms desde o inicio
+[00:00:44.082,000] <inf> prioridades: B: inicio 30067 ms, fim 44082 ms, duracao 14014790 us
+[00:00:44.141,000] <inf> prioridades: A: inicio 44090 ms, fim 44141 ms, duracao 50084 us
+[00:00:45.091,000] <inf> prioridades: B: 0 iteracoes, 0 ms desde o inicio
+[00:00:47.265,000] <inf> prioridades: B: 2000000 iteracoes, 2173 ms desde o inicio
+[00:00:49.439,000] <inf> prioridades: B: 4000000 iteracoes, 4348 ms desde o inicio
+[00:00:52.656,000] <inf> prioridades: B: 6000000 iteracoes, 7565 ms desde o inicio
+[00:00:55.872,000] <inf> prioridades: B: 8000000 iteracoes, 10781 ms desde o inicio
+[00:00:59.089,000] <inf> prioridades: B: inicio 45091 ms, fim 59088 ms, duracao 13997875 us
+[00:00:59.147,000] <inf> prioridades: A: inicio 59097 ms, fim 59147 ms, duracao 50084 us
+[00:01:00.097,000] <inf> prioridades: B: 0 iteracoes, 0 ms desde o inicio
+[00:01:02.271,000] <inf> prioridades: B: 2000000 iteracoes, 2174 ms desde o inicio
+[00:01:04.446,000] <inf> prioridades: B: 4000000 iteracoes, 4349 ms desde o inicio
+[00:01:07.134,000] <inf> prioridades: ISR botao em 67134 ms (interrompeu a thread b_tid)
+[00:01:07.671,000] <inf> prioridades: B: 6000000 iteracoes, 7574 ms desde o inicio
+[00:01:10.887,000] <inf> prioridades: B: 8000000 iteracoes, 10790 ms desde o inicio
+[00:01:14.104,000] <inf> prioridades: B: inicio 60097 ms, fim 74104 ms, duracao 14006333 us
+[00:01:14.163,000] <inf> prioridades: A: inicio 74112 ms, fim 74162 ms, duracao 50084 us
+[00:01:15.113,000] <inf> prioridades: B: 0 iteracoes, 0 ms desde o inicio
+[00:01:17.286,000] <inf> prioridades: B: 2000000 iteracoes, 2174 ms desde o inicio
+[00:01:19.461,000] <inf> prioridades: B: 4000000 iteracoes, 4349 ms desde o inicio
+[00:01:22.678,000] <inf> prioridades: B: 6000000 iteracoes, 7565 ms desde o inicio
+[00:01:25.894,000] <inf> prioridades: B: 8000000 iteracoes, 10782 ms desde o inicio
+[00:01:29.110,000] <inf> prioridades: B: inicio 75112 ms, fim 89110 ms, duracao 13997884 us
+[00:01:29.169,000] <inf> prioridades: A: inicio 89119 ms, fim 89169 ms, duracao 50084 us
+[00:01:30.119,000] <inf> prioridades: B: 0 iteracoes, 0 ms desde o inicio
+[00:01:32.293,000] <inf> prioridades: B: 2000000 iteracoes, 2174 ms desde o inicio
+[00:01:34.468,000] <inf> prioridades: B: 4000000 iteracoes, 4349 ms desde o inicio
+[00:01:37.543,000] <inf> prioridades: ISR botao em 97543 ms (interrompeu a thread b_tid)
+[00:01:37.552,000] <inf> prioridades: ISR botao em 97551 ms (interrompeu a thread b_tid)
+[00:01:37.701,000] <inf> prioridades: B: 6000000 iteracoes, 7582 ms desde o inicio
+[00:01:40.918,000] <inf> prioridades: B: 8000000 iteracoes, 10799 ms desde o inicio
+[00:01:44.134,000] <inf> prioridades: B: inicio 90119 ms, fim 104134 ms, duracao 14014843 us
+[00:01:44.193,000] <inf> prioridades: A: inicio 104143 ms, fim 104193 ms, duracao 50084 us
+[00:01:45.143,000] <inf> prioridades: B: 0 iteracoes, 0 ms desde o inicio
+[00:01:47.317,000] <inf> prioridades: B: 2000000 iteracoes, 2174 ms desde o inicio
+[00:01:49.492,000] <inf> prioridades: B: 4000000 iteracoes, 4349 ms desde o inicio
+[00:01:52.645,000] <inf> prioridades: ISR botao em 112645 ms (interrompeu a thread b_tid)
+[00:01:52.654,000] <inf> prioridades: ISR botao em 112654 ms (interrompeu a thread b_tid)
+[00:01:52.725,000] <inf> prioridades: B: 6000000 iteracoes, 7582 ms desde o inicio
+[00:01:53.884,000] <inf> prioridades: ISR botao em 113884 ms (interrompeu a thread b_tid)
+[00:01:55.950,000] <inf> prioridades: B: 8000000 iteracoes, 10807 ms desde o inicio
+[00:01:59.167,000] <inf> prioridades: B: inicio 105143 ms, fim 119167 ms, duracao 14023577 us
+[00:01:59.226,000] <inf> prioridades: A: inicio 119175 ms, fim 119226 ms, duracao 50084 us
+[00:02:00.176,000] <inf> prioridades: B: 0 iteracoes, 0 ms desde o inicio
+[00:02:02.350,000] <inf> prioridades: B: 2000000 iteracoes, 2173 ms desde o inicio
+[00:02:04.524,000] <inf> prioridades: B: 4000000 iteracoes, 4348 ms desde o inicio
+[00:02:07.741,000] <inf> prioridades: B: 6000000 iteracoes, 7565 ms desde o inicio
+[00:02:10.957,000] <inf> prioridades: B: 8000000 iteracoes, 10781 ms desde o inicio
+[00:02:14.174,000] <inf> prioridades: B: inicio 120176 ms, fim 134173 ms, duracao 13997893 us
+[00:02:14.233,000] <inf> prioridades: A: inicio 134182 ms, fim 134232 ms, duracao 50084 us
+[00:02:15.183,000] <inf> prioridades: B: 0 iteracoes, 0 ms desde o inicio
+[00:02:17.356,000] <inf> prioridades: B: 2000000 iteracoes, 2174 ms desde o inicio
+[00:02:19.531,000] <inf> prioridades: B: 4000000 iteracoes, 4349 ms desde o inicio
+[00:02:22.748,000] <inf> prioridades: B: 6000000 iteracoes, 7565 ms desde o inicio
+[00:02:25.964,000] <inf> prioridades: B: 8000000 iteracoes, 10782 ms desde o inicio
+[00:02:29.180,000] <inf> prioridades: B: inicio 135182 ms, fim 149180 ms, duracao 13997899 us
+[00:02:29.239,000] <inf> prioridades: A: inicio 149189 ms, fim 149239 ms, duracao 50084 us
+[00:02:30.189,000] <inf> prioridades: B: 0 iteracoes, 0 ms desde o inicio
+[00:02:32.363,000] <inf> prioridades: B: 2000000 iteracoes, 2174 ms desde o inicio
+[00:02:34.538,000] <inf> prioridades: B: 4000000 iteracoes, 4349 ms desde o inicio
+[00:02:37.754,000] <inf> prioridades: B: 6000000 iteracoes, 7565 ms desde o inicio
+[00:02:39.155,000] <inf> prioridades: ISR botao em 159155 ms (interrompeu a thread b_tid)
+[00:02:39.164,000] <inf> prioridades: ISR botao em 159163 ms (interrompeu a thread b_tid)
+[00:02:40.988,000] <inf> prioridades: B: 8000000 iteracoes, 10799 ms desde o inicio
+[00:02:44.204,000] <inf> prioridades: B: inicio 150189 ms, fim 164204 ms, duracao 14015022 us
+[00:02:44.264,000] <inf> prioridades: A: inicio 164213 ms, fim 164263 ms, duracao 50084 us
+[00:02:45.213,000] <inf> prioridades: B: 0 iteracoes, 0 ms desde o inicio
+[00:02:47.387,000] <inf> prioridades: B: 2000000 iteracoes, 2174 ms desde o inicio
+[00:02:49.562,000] <inf> prioridades: B: 4000000 iteracoes, 4349 ms desde o inicio
+[00:02:52.778,000] <inf> prioridades: B: 6000000 iteracoes, 7565 ms desde o inicio
+[00:02:55.995,000] <inf> prioridades: B: 8000000 iteracoes, 10782 ms desde o inicio
+[00:02:59.211,000] <inf> prioridades: B: inicio 165213 ms, fim 179211 ms, duracao 13997895 us
+[00:02:59.270,000] <inf> prioridades: A: inicio 179220 ms, fim 179270 ms, duracao 50084 us
+[00:03:00.220,000] <inf> prioridades: B: 0 iteracoes, 0 ms desde o inicio
+[00:03:02.394,000] <inf> prioridades: B: 2000000 iteracoes, 2174 ms desde o inicio
+[00:03:04.569,000] <inf> prioridades: B: 4000000 iteracoes, 4349 ms desde o inicio
