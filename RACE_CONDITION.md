@@ -15,6 +15,7 @@ Este foi o prompt que usei na IA:
 > Estou usando a placa FRDM-KL25Z com Zephyr 4.2 no PlatformIO. Preciso de um código simples em C que mostre uma race condition (condição de corrida) quando duas threads usam a mesma variável sem proteção.
 >
 > Quero usar como exemplo um estacionamento com duas cancelas:
+>
 > - uma thread é a cancela de entrada e soma 1 no número de carros dentro
 > - outra thread é a cancela de saída e tira 1
 > - cada cancela passa 1000 carros, então no final tem que dar 0
