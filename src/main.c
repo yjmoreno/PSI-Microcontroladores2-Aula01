@@ -1,150 +1,171 @@
 #include <zephyr/kernel.h>
-#include <zephyr/drivers/gpio.h>
 #include <zephyr/device.h>
-#include <zephyr/logging/log.h>
-
-LOG_MODULE_REGISTER(prioridades, LOG_LEVEL_INF);
+#include <zephyr/drivers/sensor.h>
+#include <zephyr/drivers/gpio.h>
+#include <math.h>
 
 /* ====================================================
- * ESCOLHA DO CASO: mude o numero, grave e salve o log
- *   1: A prio 5,  B prio 7,  os dois dormem  (codigo original)
- *   2: A prio 7,  B prio 5,  os dois dormem  (prioridades invertidas)
- *   3: A prio 7,  B prio 7,  os dois dormem  (prioridades iguais)
- *   4: A prio 5,  B prio 7,  B SEM k_msleep  (B nunca dorme, prioridade menor)
- *   5: A prio 7,  B prio 5,  B SEM k_msleep  (B nunca dorme, prioridade maior)
- *   6: A prio 5,  B prio -1 (cooperativa)    (A nao consegue interromper B)
+ * Atividade Acelerometro - Serial (com threads)
+ *
+ *   aquisicao  (prio 5): le o MMA8451Q a cada 50 ms
+ *   integracao (prio 6): calcula velocidade e posicao (regra dos trapezios)
+ *   serial     (prio 7): manda ax,ay,az,vx,vy,vz,px,py,pz pela serial
+ *
+ * As threads conversam por duas filas de mensagens (k_msgq):
+ *   aquisicao --fila_acel--> integracao --fila_serial--> serial
  * ==================================================== */
-#define CASO 1
 
-#if CASO == 1
-#define PRIO_THREAD_A 5
-#define PRIO_THREAD_B 7
-#define B_DORME       1
-#elif CASO == 2
-#define PRIO_THREAD_A 7
-#define PRIO_THREAD_B 5
-#define B_DORME       1
-#elif CASO == 3
-#define PRIO_THREAD_A 7
-#define PRIO_THREAD_B 7
-#define B_DORME       1
-#elif CASO == 4
-#define PRIO_THREAD_A 5
-#define PRIO_THREAD_B 7
-#define B_DORME       0
-#elif CASO == 5
-#define PRIO_THREAD_A 7
-#define PRIO_THREAD_B 5
-#define B_DORME       0
-#elif CASO == 6
-#define PRIO_THREAD_A 5
-#define PRIO_THREAD_B -1
-#define B_DORME       1
-#endif
+#define PERIODO_MS   50                    /* 20 amostras por segundo */
+#define DT           (PERIODO_MS / 1000.0f) /* passo de integracao em segundos */
 
-#define TEMPO_A_MS  1500  // Thread A dorme
-#define TEMPO_B_MS  1000  // Thread B dorme
-#define STACK_SIZE  1024  // 512 nao basta com Logging (formatacao usa a pilha)
-#define ATRASO_MS   50    // threads comecam depois do main configurar os GPIOs
+#define PRIO_AQUISICAO   5   /* menor numero = maior prioridade */
+#define PRIO_INTEGRACAO  6
+#define PRIO_SERIAL      7
 
-// --- LEDs e botao via DeviceTree ---
-#define LED_A_NODE  DT_ALIAS(led0)                 // LED verde
-#define LED_B_NODE  DT_ALIAS(led2)                 // LED vermelho
-#define LED_C_NODE  DT_ALIAS(led1)                 // LED azul (ISR)
-#define BUTTON_NODE DT_NODELABEL(user_button_0)    // SW0 (PTA16)
+#define STACK_SIZE   1024
+#define N_CALIBRA    20      /* 20 amostras = 1 s parado para medir o offset */
+#define ZONA_MORTA   0.10f   /* m/s^2: abaixo disso considera aceleracao zero */
 
-static const struct gpio_dt_spec ledA   = GPIO_DT_SPEC_GET(LED_A_NODE, gpios);
-static const struct gpio_dt_spec ledB   = GPIO_DT_SPEC_GET(LED_B_NODE, gpios);
-static const struct gpio_dt_spec ledC   = GPIO_DT_SPEC_GET(LED_C_NODE, gpios);
-static const struct gpio_dt_spec button = GPIO_DT_SPEC_GET(BUTTON_NODE, gpios);
-static struct gpio_callback button_cb_data;
+/* LED vermelho aceso enquanto calibra (deixe a placa parada!) */
+static const struct gpio_dt_spec led_cal = GPIO_DT_SPEC_GET(DT_ALIAS(led2), gpios);
+
+/* Acelerometro da placa (alias accel0 -> mma8451q@1d no I2C0) */
+static const struct device *const acel = DEVICE_DT_GET(DT_ALIAS(accel0));
+
+/* Uma leitura do sensor */
+struct amostra {
+    float a[3];          /* ax, ay, az em m/s^2 */
+};
+
+/* O que vai para a serial */
+struct estado {
+    float a[3];          /* aceleracao (ja sem offset) */
+    float v[3];          /* velocidade */
+    float p[3];          /* posicao */
+};
+
+K_MSGQ_DEFINE(fila_acel,   sizeof(struct amostra), 8, 4);
+K_MSGQ_DEFINE(fila_serial, sizeof(struct estado),  8, 4);
+
+/* Contadores de amostras perdidas (fila cheia) - so para conferencia */
+static uint32_t perdidas_acel;
+static uint32_t perdidas_serial;
 
 // ----------------------------------------------------
-// THREAD A — tarefa curta
+// THREAD 1 — aquisicao do acelerometro
 // ----------------------------------------------------
-void thread_A(void *p1, void *p2, void *p3)
+void thread_aquisicao(void *p1, void *p2, void *p3)
 {
+    struct sensor_value val[3];
+    struct amostra s;
+    struct k_timer timer;
+
+    /* timer periodico: o periodo nao "escorrega" mesmo se a leitura demorar */
+    k_timer_init(&timer, NULL, NULL);
+    k_timer_start(&timer, K_MSEC(PERIODO_MS), K_MSEC(PERIODO_MS));
+
     while (1) {
-        uint32_t inicio_ms = k_uptime_get_32();
-        uint32_t inicio_cyc = k_cycle_get_32();   // contador do SysTick (48 MHz)
+        k_timer_status_sync(&timer);           /* dorme ate o proximo tick de 50 ms */
 
-        gpio_pin_set_dt(&ledA, 1);
-        for (volatile int i = 0; i < 200000; i++) {}
-        gpio_pin_set_dt(&ledA, 0);
+        if (sensor_sample_fetch(acel) < 0) {
+            continue;                          /* leitura falhou, tenta no proximo periodo */
+        }
+        sensor_channel_get(acel, SENSOR_CHAN_ACCEL_XYZ, val);
 
-        uint32_t dur_us = k_cyc_to_us_floor32(k_cycle_get_32() - inicio_cyc);
-        LOG_INF("A: inicio %u ms, fim %u ms, duracao %u us",
-                inicio_ms, k_uptime_get_32(), dur_us);
+        for (int i = 0; i < 3; i++) {
+            s.a[i] = sensor_value_to_float(&val[i]);
+        }
 
-        k_msleep(TEMPO_A_MS);
+        /* K_NO_WAIT: a aquisicao nunca fica bloqueada esperando as outras threads */
+        if (k_msgq_put(&fila_acel, &s, K_NO_WAIT) != 0) {
+            perdidas_acel++;
+        }
     }
 }
 
 // ----------------------------------------------------
-// THREAD B — tarefa longa
+// THREAD 2 — integracao numerica (regra dos trapezios)
 // ----------------------------------------------------
-void thread_B(void *p1, void *p2, void *p3)
+void thread_integracao(void *p1, void *p2, void *p3)
 {
-    while (1) {
-        uint32_t inicio_ms = k_uptime_get_32();
-        uint32_t inicio_cyc = k_cycle_get_32();
+    struct amostra s;
+    struct estado e = {0};
+    float offset[3] = {0};
+    float a_ant[3] = {0};    /* aceleracao da amostra anterior */
+    float v_ant[3] = {0};    /* velocidade da amostra anterior */
 
-        gpio_pin_set_dt(&ledB, 1);
-        for (volatile int i = 0; i < 10000000; i++) {
-            if (i % 2000000 == 0) {
-                // tempo intermediario: mostra se B foi interrompida no meio
-                LOG_INF("B: %d iteracoes, %u ms desde o inicio",
-                        i, k_uptime_get_32() - inicio_ms);
+    /* 1) Calibracao: media das primeiras N_CALIBRA amostras com a placa parada.
+     *    Isso tira o offset do sensor e a gravidade (que aparece no eixo z). */
+    gpio_pin_set_dt(&led_cal, 1);
+    for (int n = 0; n < N_CALIBRA; n++) {
+        k_msgq_get(&fila_acel, &s, K_FOREVER);
+        for (int i = 0; i < 3; i++) {
+            offset[i] += s.a[i] / N_CALIBRA;
+        }
+    }
+    gpio_pin_set_dt(&led_cal, 0);
+
+    /* 2) Integracao: a cada amostra nova
+     *    v[k] = v[k-1] + (a[k-1] + a[k]) / 2 * dt
+     *    p[k] = p[k-1] + (v[k-1] + v[k]) / 2 * dt   */
+    while (1) {
+        k_msgq_get(&fila_acel, &s, K_FOREVER);   /* bloqueia ate chegar amostra */
+
+        for (int i = 0; i < 3; i++) {
+            float a = s.a[i] - offset[i];
+            if (fabsf(a) < ZONA_MORTA) {
+                a = 0.0f;                        /* ruido de placa parada */
             }
+
+            e.a[i] = a;
+            e.v[i] = v_ant[i] + (a_ant[i] + a) / 2.0f * DT;
+            e.p[i] = e.p[i] + (v_ant[i] + e.v[i]) / 2.0f * DT;
+
+            a_ant[i] = a;
+            v_ant[i] = e.v[i];
         }
-        gpio_pin_set_dt(&ledB, 0);
 
-        uint32_t dur_us = k_cyc_to_us_floor32(k_cycle_get_32() - inicio_cyc);
-        LOG_INF("B: inicio %u ms, fim %u ms, duracao %u us",
-                inicio_ms, k_uptime_get_32(), dur_us);
-
-        if (B_DORME) {
-            k_msleep(TEMPO_B_MS);
+        if (k_msgq_put(&fila_serial, &e, K_NO_WAIT) != 0) {
+            perdidas_serial++;
         }
     }
 }
 
 // ----------------------------------------------------
-// ISR do botao — roda acima de qualquer thread
+// THREAD 3 — envio pela serial (formato CSV)
 // ----------------------------------------------------
-void button_isr(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
+void thread_serial(void *p1, void *p2, void *p3)
 {
-    gpio_pin_toggle_dt(&ledC);
-    LOG_INF("ISR botao em %u ms (interrompeu a thread %s)",
-            k_uptime_get_32(), k_thread_name_get(k_current_get()));
+    struct estado e;
+
+    printk("# Calibrando: deixe a placa parada por 1 s (LED vermelho aceso)\n");
+    printk("ax,ay,az,vx,vy,vz,px,py,pz\n");
+
+    while (1) {
+        k_msgq_get(&fila_serial, &e, K_FOREVER);
+
+        printk("%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f\n",
+               (double)e.a[0], (double)e.a[1], (double)e.a[2],
+               (double)e.v[0], (double)e.v[1], (double)e.v[2],
+               (double)e.p[0], (double)e.p[1], (double)e.p[2]);
+    }
 }
 
-K_THREAD_DEFINE(a_tid, STACK_SIZE, thread_A, NULL, NULL, NULL, PRIO_THREAD_A, 0, ATRASO_MS);
-K_THREAD_DEFINE(b_tid, STACK_SIZE, thread_B, NULL, NULL, NULL, PRIO_THREAD_B, 0, ATRASO_MS);
+K_THREAD_DEFINE(aquisicao_tid,  STACK_SIZE, thread_aquisicao,  NULL, NULL, NULL,
+                PRIO_AQUISICAO,  0, 100);
+K_THREAD_DEFINE(integracao_tid, STACK_SIZE, thread_integracao, NULL, NULL, NULL,
+                PRIO_INTEGRACAO, 0, 100);
+K_THREAD_DEFINE(serial_tid,     STACK_SIZE, thread_serial,     NULL, NULL, NULL,
+                PRIO_SERIAL,     0, 100);
 
 int main(void)
 {
-    if (!gpio_is_ready_dt(&ledA) || !gpio_is_ready_dt(&ledB) ||
-        !gpio_is_ready_dt(&ledC) || !gpio_is_ready_dt(&button)) {
-        LOG_ERR("GPIO nao esta pronto");
+    if (!device_is_ready(acel)) {
+        printk("# Erro: acelerometro nao encontrado\n");
+        k_thread_abort(aquisicao_tid);
         return 0;
     }
 
-    gpio_pin_configure_dt(&ledA, GPIO_OUTPUT_INACTIVE);
-    gpio_pin_configure_dt(&ledB, GPIO_OUTPUT_INACTIVE);
-    gpio_pin_configure_dt(&ledC, GPIO_OUTPUT_INACTIVE);
-
-    gpio_pin_configure_dt(&button, GPIO_INPUT | GPIO_PULL_UP);
-    gpio_pin_interrupt_configure_dt(&button, GPIO_INT_EDGE_FALLING);
-    gpio_init_callback(&button_cb_data, button_isr, BIT(button.pin));
-    gpio_add_callback(button.port, &button_cb_data);
-
-    LOG_INF("=== Caso %d: A prio %d, B prio %d, B dorme: %s ===",
-            CASO, PRIO_THREAD_A, PRIO_THREAD_B, B_DORME ? "sim" : "nao");
-    LOG_INF("Clock do SysTick: %u Hz", sys_clock_hw_cycles_per_sec());
-
-    while (1) {
-        k_sleep(K_FOREVER); // main dorme e libera a CPU
-    }
-    return 0;
+    gpio_pin_configure_dt(&led_cal, GPIO_OUTPUT_INACTIVE);
+    return 0;   /* o main termina; as tres threads continuam rodando */
 }
