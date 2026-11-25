@@ -45,6 +45,12 @@ def iniciar_leitura(porta):
 
                 if linha.startswith('#'):        # mensagens da placa (calibração etc.)
                     print(linha)
+                    if 'Calibrando' in linha:    # placa resetou: descarta o que veio antes
+                        arquivo.seek(0)
+                        arquivo.truncate()
+                        escritor_csv.writerow(COLUNAS)
+                        n = 0
+                        print("Reset detectado: arquivo reiniciado.")
                     continue
 
                 dados = linha.split(',')

@@ -5,9 +5,10 @@ O projeto lê o acelerômetro MMA8451Q da FRDM-KL25Z (I²C0, endereço 0x1D), ca
 ## Como rodar
 
 1. Abrir a pasta no VSCode com PlatformIO e fazer **Upload**.
-2. Logo depois do reset, deixar a placa **parada por 1 s** (LED vermelho aceso): é a calibração.
-3. No computador, rodar `python leitor_serial.py` (ou `python leitor_serial.py /dev/cu.usbmodemXXXX` no Mac), mexer a placa e encerrar com Ctrl+C.
-4. Rodar `python gerar_graficos.py` para gerar `graficos_atividade2.png`.
+2. No computador, rodar `python leitor_serial.py` (no Mac, `python leitor_serial.py /dev/cu.usbmodemXXXX`).
+3. Com o leitor já conectado, apertar **RESET** e deixar a placa **parada sobre a mesa** até o LED vermelho apagar (1 s de calibração). O leitor percebe o reset e recomeça o arquivo do zero.
+4. Mexer a placa, esperar uns 2 s parada e encerrar com Ctrl+C.
+5. Rodar `python gerar_graficos.py` para gerar `graficos_atividade2.png`.
 
 ## Organização das threads
 
@@ -48,6 +49,12 @@ Antes de integrar, a thread de integração faz uma calibração: a média das p
 
 Mesmo assim, a posição obtida só pela integração dupla do acelerômetro diverge com o tempo: qualquer erro pequeno de offset vira uma velocidade que cresce linearmente e uma posição que cresce com t². Inclinar a placa também faz parte da gravidade aparecer em x ou y, o que a calibração inicial não corrige. Por isso os resultados fazem sentido em movimentos curtos (alguns segundos), com a placa deslizando sobre a mesa sem girar.
 
-## Teste da cadeia (antes da placa)
+## Resultados na placa
 
-O firmware compila para `frdm_kl25z` (Zephyr 4.2, PlatformIO) sem warnings: ~26 KB de flash (20%) e ~8 KB de RAM (49%). Para testar o resto, simulei uma placa parada por 2 s e depois deslocada 0,30 m em x, com ruído, offset e a gravidade em z, aplicando exatamente as mesmas contas do `main.c`. As linhas foram mandadas por uma serial virtual para o `leitor_serial.py`, junto com lixo do boot, um cabeçalho repetido e uma linha incompleta: o leitor guardou só as 180 linhas válidas e o `gerar_graficos.py` gerou o gráfico. A posição final calculada foi 0,28 m para 0,30 m reais; a diferença vem principalmente da zona morta, que corta o começo e o fim de cada pulso de aceleração.
+Fiz duas capturas, as duas com a calibração feita com a placa deitada e parada na mesa. Os gráficos e os dados estão na pasta `resultados/`.
+
+**Movimento lento** (`grafico_movimento_lento.png`). Deslizei a placa devagar, com vários ajustes, por uns 25 s. As acelerações ficaram pequenas, quase todas abaixo de 0,5 m/s² e muitas perto da zona morta de 0,1 m/s². Com isso, pedaços da arrancada e da frenagem foram cortados, a velocidade nunca voltou a zero (terminou em −0,28 m/s em x) e a posição foi derivando até quase −6 m, um valor sem sentido físico. Nesse caso o erro pesa mais do que o próprio movimento.
+
+**Movimento rápido** (`grafico_movimento_rapido.png`). Dei um empurrão único e firme. O pulso aparece bem claro perto dos 10 s: `ax` sobe até 1,3 m/s² na arrancada e cai a −3,3 m/s² na frenagem, `vx` faz uma corcova com pico de 0,8 m/s e `px` sobe até uns 0,6 m. Como as acelerações ficaram bem acima da zona morta, o formato do movimento foi capturado. Mesmo assim a velocidade não volta exatamente a zero (sobra −0,17 m/s em x e −0,37 m/s em y, provavelmente porque a placa girou um pouco no empurrão e misturou os eixos), e depois que a placa para a posição continua derivando em linha reta.
+
+A comparação mostra na prática a limitação da integração dupla: qualquer resto de velocidade vira uma deriva de posição que cresce com o tempo. Movimentos curtos e bruscos dão um resultado coerente, enquanto movimentos lentos ficam abaixo do que o método consegue medir e capturas longas acumulam erro. Uma melhoria simples seria zerar a velocidade sempre que a placa ficar parada por alguns instantes.
